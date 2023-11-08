@@ -70,9 +70,22 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/orders' ,  async (req , res) => {
+      const email = req.query.email;
+      const query = { userEmail : email};
+      const result = await orderCollection.find(query).toArray()
+      res.send(result)
+    })
+
     app.post('/foods' , async (req , res) => {
       const body = req.body;
       const result = await foodsCollection.insertOne(body);
+      res.send(result)
+    })
+
+    app.post('/orders' , async (req , res) => {
+      const body = req.body;
+      const result = await orderCollection.insertOne(body);
       res.send(result)
     })
 

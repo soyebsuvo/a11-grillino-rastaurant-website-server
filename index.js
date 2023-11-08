@@ -4,13 +4,18 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 var jwt = require("jsonwebtoken");
-var cookieParser = require('cookie-parser')
+var cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middlewares
 app.use(
   cors({
-    origin: ["http://localhost:5173" , "http://assignment-11-35e68.firebaseapp.com" , "http://assignment-11-35e68.web.app"],
+    origin: [
+      "http://localhost:5173",
+      "https://assignment-11-35e68.firebaseapp.com",
+      "https://assignment-11-35e68.web.app",
+      "https://vacuous-dog.surge.sh"
+    ],
     credentials: true,
   })
 );
@@ -18,21 +23,20 @@ app.use(express.json());
 app.use(cookieParser());
 
 // my middlewares
-const verifyToken = (req , res , next) => {
-    const token = req?.cookies?.token;
-    // console.log(token)
-    if(!token){
-      return res.status(401).send({message : 'unauthorized access'});
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  // console.log(token)
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res.status(401).send({ message: "unauthorized access" });
     }
-    jwt.verify(token , process.env.ACCESS_TOKEN_SECRET , (error , decoded) => {
-      if(error){
-        return res.status(401).send({message : 'unauthorized access'});
-      }
-      req.user = decoded;
-      next()
-    })
-}
-
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.awacgo4.mongodb.net/?retryWrites=true&w=majority`;
 // const uri =
@@ -50,7 +54,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     const database = client.db("foodDB");
     const foodsCollection = database.collection("foods");
     const orderCollection = database.collection("orders");
@@ -62,12 +66,12 @@ async function run() {
         expiresIn: "2h",
       });
       res
-        .cookie("token", token, {
+        .cookie('token', token, {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
         })
-        .send({ message: "success" });
+        .send({ success: true })
     });
 
     app.get("/foods", async (req, res) => {
@@ -90,7 +94,7 @@ async function run() {
       const count = await foodsCollection.estimatedDocumentCount();
       res.send({ count });
     });
-    app.get("/food/:id" , async (req, res) => {
+    app.get("/food/:id", async (req, res) => {
       const id = req.params.id;
       console.log(id);
       const query = { _id: new ObjectId(id) };
@@ -105,14 +109,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/foodss", verifyToken , async (req, res) => {
+    app.get("/foodss", verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { userEmail: email };
       const result = await foodsCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/orders", verifyToken , async (req, res) => {
+    app.get("/orders", verifyToken, async (req, res) => {
       const email = req?.query?.email;
       const query = { userEmail: email };
       const result = await orderCollection.find(query).toArray();
@@ -126,11 +130,11 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/users' , async (req , res) => {
+    app.post("/users", async (req, res) => {
       const body = req.body;
       const result = await usersCollection.insertOne(body);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     app.post("/foods", async (req, res) => {
       const body = req.body;
@@ -185,7 +189,7 @@ async function run() {
       const updatedDoc = {
         $set: {
           count: body.count,
-          quantity : body.quantity
+          quantity: body.quantity,
         },
       };
       const result = await foodsCollection.updateOne(filter, updatedDoc);

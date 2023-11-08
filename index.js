@@ -77,6 +77,13 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/orders/:id' , async (req , res) =>{
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id)};
+      const result = await orderCollection.findOne(query);
+      res.send(result);
+    })
+
     app.post('/foods' , async (req , res) => {
       const body = req.body;
       const result = await foodsCollection.insertOne(body);
@@ -87,6 +94,13 @@ async function run() {
       const body = req.body;
       const result = await orderCollection.insertOne(body);
       res.send(result)
+    })
+
+    app.delete('/orders/:id' , async (req , res) => {
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id)};
+      const result = await orderCollection.deleteOne(query);
+      res.send(result);
     })
 
     // Send a ping to confirm a successful connection

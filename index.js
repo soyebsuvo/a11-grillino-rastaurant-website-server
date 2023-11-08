@@ -4,6 +4,7 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 var jwt = require("jsonwebtoken");
+var cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middlewares
@@ -14,6 +15,24 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
+
+// my middlewares
+const verifyToken = (req , res , next) => {
+    const token = req?.cookies?.token;
+    // console.log(token)
+    if(!token){
+      return res.status(401).send({message : 'unauthorized access'});
+    }
+    jwt.verify(token , process.env.ACCESS_TOKEN_SECRET , (error , decoded) => {
+      if(error){
+        return res.status(401).send({message : 'unauthorized access'});
+      }
+      req.user = decoded;
+      next()
+    })
+}
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.awacgo4.mongodb.net/?retryWrites=true&w=majority`;
 // const uri =
@@ -38,7 +57,9 @@ async function run() {
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, "secret", { expiresIn: "2h" });
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "2h",
+      });
       res
         .cookie("token", token, {
           httpOnly: true,
@@ -55,7 +76,7 @@ async function run() {
     app.get("/foodsByPage", async (req, res) => {
       const skip = parseInt(req.query.skip);
       const limit = parseInt(req.query.limit);
-      console.log(skip, limit);
+      // console.log(skip, limit);
       const result = await foodsCollection
         .find()
         .skip(skip * limit)
@@ -68,7 +89,7 @@ async function run() {
       const count = await foodsCollection.estimatedDocumentCount();
       res.send({ count });
     });
-    app.get("/food/:id", async (req, res) => {
+    app.get("/food/:id" , async (req, res) => {
       const id = req.params.id;
       console.log(id);
       const query = { _id: new ObjectId(id) };
@@ -83,15 +104,15 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/foodss", async (req, res) => {
+    app.get("/foodss", verifyToken , async (req, res) => {
       const email = req.query.email;
       const query = { userEmail: email };
       const result = await foodsCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/orders", async (req, res) => {
-      const email = req.query.email;
+    app.get("/orders", verifyToken , async (req, res) => {
+      const email = req?.query?.email;
       const query = { userEmail: email };
       const result = await orderCollection.find(query).toArray();
       res.send(result);

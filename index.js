@@ -3,10 +3,16 @@ const cors = require("cors");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
+var jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.awacgo4.mongodb.net/?retryWrites=true&w=majority`;
@@ -29,6 +35,18 @@ async function run() {
     const database = client.db("foodDB");
     const foodsCollection = database.collection("foods");
     const orderCollection = database.collection("orders");
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, "secret", { expiresIn: "2h" });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ message: "success" });
+    });
 
     app.get("/foods", async (req, res) => {
       const result = await foodsCollection.find().toArray();
@@ -124,21 +142,25 @@ async function run() {
           desc: body.desc,
         },
       };
-      const result = await foodsCollection.updateOne(filter , updatedDoc , options);
-      res.send(result)
+      const result = await foodsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
     });
 
-    app.patch('/food/:id' , async (req , res) => {
+    app.patch("/food/:id", async (req, res) => {
       const id = req.params.id;
       const body = req.body;
-      const filter = { _id : new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
-        $set : {
-          count : body.count
-        }
-      }
-      const result = await foodsCollection.updateOne(filter , updatedDoc)
-    })
+        $set: {
+          count: body.count,
+        },
+      };
+      const result = await foodsCollection.updateOne(filter, updatedDoc);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(

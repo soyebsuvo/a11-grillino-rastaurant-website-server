@@ -54,6 +54,7 @@ async function run() {
     const database = client.db("foodDB");
     const foodsCollection = database.collection("foods");
     const orderCollection = database.collection("orders");
+    const usersCollection = database.collection("users");
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -125,6 +126,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post('/users' , async (req , res) => {
+      const body = req.body;
+      const result = await usersCollection.insertOne(body);
+      res.send(result)
+    })
+
     app.post("/foods", async (req, res) => {
       const body = req.body;
       const result = await foodsCollection.insertOne(body);
@@ -178,6 +185,7 @@ async function run() {
       const updatedDoc = {
         $set: {
           count: body.count,
+          quantity : body.quantity
         },
       };
       const result = await foodsCollection.updateOne(filter, updatedDoc);

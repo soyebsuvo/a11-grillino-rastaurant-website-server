@@ -14,7 +14,7 @@ app.use(
       "http://localhost:5173",
       "https://assignment-11-35e68.firebaseapp.com",
       "https://assignment-11-35e68.web.app",
-      "https://vacuous-dog.surge.sh"
+      "https://vacuous-dog.surge.sh",
     ],
     credentials: true,
   })
@@ -66,12 +66,12 @@ async function run() {
         expiresIn: "2h",
       });
       res
-        .cookie('token', token, {
+        .cookie("token", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
-        .send({ success: true })
+        .send({ success: true });
     });
 
     app.get("/foods", async (req, res) => {
@@ -81,9 +81,14 @@ async function run() {
     app.get("/foodsByPage", async (req, res) => {
       const skip = parseInt(req.query.skip);
       const limit = parseInt(req.query.limit);
+      let query = {};
+      if (req.query.search) {
+        const pattern = new RegExp(req.query.search , "i")
+        query = { food_name: { $regex: pattern } };
+      }
       // console.log(skip, limit);
       const result = await foodsCollection
-        .find()
+        .find(query)
         .skip(skip * limit)
         .limit(limit)
         .toArray();
